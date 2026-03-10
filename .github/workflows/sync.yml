@@ -1,0 +1,37 @@
+name: Sync Obsidian to Hexo
+
+on:
+  push:
+    branches:
+      - main  # 监听你的写作主分支
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main branch (Obsidian Vault)
+        uses: actions/checkout@v3
+        with:
+          path: main-content
+
+      - name: Checkout hexo branch (Blog Framework)
+        uses: actions/checkout@v3
+        with:
+          ref: hexo
+          path: hexo-framework
+
+      - name: Sync Markdown files to Hexo
+        run: |
+          mkdir -p hexo-framework/source/_posts
+          # 使用 rsync 同步文件，排除 Obsidian 配置文件、Git 文件和 Actions 脚本
+          # --delete 表示如果你在 Obsidian 删除了文章，博客也会同步删除
+          rsync -av --delete --exclude='.obsidian' --exclude='.git' --exclude='.github' main-content/ hexo-framework/source/_posts/
+
+      - name: Commit and Push to hexo branch
+        run: |
+          cd hexo-framework
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Auto-sync posts from Obsidian" || echo "No changes to commit"
+          git push origin hexo
